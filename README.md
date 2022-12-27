@@ -1,0 +1,1 @@
+A Nostr Rust client
