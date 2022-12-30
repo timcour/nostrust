@@ -28,21 +28,27 @@ fn _print_type_of<T>(_: &T) {
 
 fn parse_response(raw: &str) -> Result<RelayMessage> {
     let msg = parse_relay_message(&raw)?;
-    println!("Parsed message: {:?}", msg);
+
+    match msg {
+        RelayMessage::Event(ref msg) => println!("{}", msg.event),
+        RelayMessage::Notice(_) => println!("Notice: {:?}", msg),
+        RelayMessage::Unknown(_) => println!("Unknown: {:?}", msg),
+    }
+
     Ok(msg)
 }
 
 async fn firehose(uri: Uri) -> Result<(), tokio_websockets::Error> {
-    println!("Connecting to url: {:?}", uri);
+    println!("Connecting to url: {:?}", &uri);
+    let uri_clone = uri.clone();
     let mut client = ClientBuilder::from_uri(uri).connect().await?;
 
     client.send(Message::text(String::from(REQ_FRIEND))).await?;
-    println!("Message sent");
+    println!("REQ_FRIEND sent to relay: {:?}", &uri_clone);
 
     while let Some(Ok(msg)) = client.next().await {
         if let Ok(text) = msg.as_text() {
-            let message = parse_response(text);
-            println!("{:?}", message);
+            let _message = parse_response(text);
         }
     }
 

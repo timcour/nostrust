@@ -1,3 +1,4 @@
+use std::fmt;
 use serde::{Deserialize, Serialize};
 
 // {
@@ -23,4 +24,16 @@ pub struct Event {
     pub tags: Vec<Vec<String>>,
     pub content: String,
     pub sig: String
+}
+
+impl fmt::Display for Event {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, r#"Event
+  id: {}
+  content: {}
+  pubkey: {}
+  sig: {}
+  kind: {}
+"#, self.id, self.content, self.pubkey, self.sig, self.kind)
+    }
 }
