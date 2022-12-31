@@ -1,7 +1,7 @@
-use std::fmt;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sha2::{Sha256, Digest};
+use std::fmt;
 
 // {
 //     "id": <32-bytes sha256 of the the serialized event data>
@@ -16,7 +16,6 @@ use sha2::{Sha256, Digest};
 //     "content": <arbitrary string>,
 //     "sig": <64-bytes signature of the sha256 hash of the serialized event data, which is the same as the "id" field>
 // }
-
 #[derive(Deserialize, Serialize, Debug)]
 pub struct Event {
     pub id: String,

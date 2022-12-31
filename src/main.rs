@@ -1,10 +1,9 @@
-use std::str::FromStr;
-
+use clap::Parser;
 use eyre::Result;
 use futures_util::sink::SinkExt;
-use clap::Parser;
 use http::Uri;
 use nostr::message::RelayMessage;
+use std::str::FromStr;
 use tokio_websockets::{ClientBuilder, Message};
 
 use crate::nostr::message::parse_relay_message;

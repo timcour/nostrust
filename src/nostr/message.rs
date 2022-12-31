@@ -1,7 +1,6 @@
-use std::str::FromStr;
-
 use eyre::{eyre, Result};
 use serde_json::{self, Value};
+use std::str::FromStr;
 
 use super::event::Event;
 
