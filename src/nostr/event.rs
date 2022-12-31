@@ -48,7 +48,7 @@ impl fmt::Display for Event {
 //     <tags, as an array of arrays of non-null strings>,
 //     <content, as a string>
 // ]
-pub fn derive_event_id(event: &Event) {
+pub fn derive_event_id(event: &Event) -> String {
     let parts = json!([
         0,
         event.pubkey,
@@ -63,6 +63,21 @@ pub fn derive_event_id(event: &Event) {
     let mut hasher = Sha256::new();
     hasher.update(bytes);
     let result = hasher.finalize();
+    format!("{:x}", &result)
+}
 
-    println!("Computed ID: {:X?}", &result);
+#[test]
+fn verify_event_id() {
+    let event: Event = Event {
+        id: String::from("da7d89bc06080d60ae537ff0285b51f7a5e15e63eb3c21a0c37c76edbbe24255"),
+        pubkey: String::from("b708f7392f588406212c3882e7b3bc0d9b08d62f95fa170d099127ece2770e5e"),
+        created_at: 1672310253,
+        kind: 1,
+        tags: [].to_vec(),
+        content: String::from("imagine all the unfettered conversations 😯"),
+        sig: String::from("d706fb48dbdd4fe272a006ee7f9fe74416a603cdfbb253dd82f1dc6bcea3cfe79334abb034701747941819878b31b28753a6dd38c4cda9c82453bf676ea2ba38")
+    };
+
+    let result = derive_event_id(&event);
+    assert_eq!(result, event.id);
 }
