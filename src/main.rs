@@ -47,6 +47,7 @@ async fn firehose(uri: Uri) -> Result<(), tokio_websockets::Error> {
 
     while let Some(Ok(msg)) = client.next().await {
         if let Ok(text) = msg.as_text() {
+            println!("msg: {}", text);
             let _message = parse_response(text);
         }
     }

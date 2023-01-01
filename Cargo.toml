@@ -16,3 +16,4 @@ futures-util = "0.3.25"
 serde = "1.0.152"
 eyre = "0.6.8"
 sha2 = "0.10.6"
+secp256k1 = { version ="0.25.0", features = ["rand-std", "bitcoin-hashes", "global-context"] }
