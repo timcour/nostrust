@@ -2,7 +2,7 @@ use eyre::{eyre, Result};
 use serde_json::{self, Value};
 use std::str::FromStr;
 
-use super::event::Event;
+use super::event::{Event, parse_event};
 
 #[derive(Debug)]
 pub struct MessageUnknown {
@@ -94,7 +94,7 @@ pub fn parse_relay_message(raw: &str) -> Result<RelayMessage> {
     let message: RelayMessage = match kind.as_str() {
         "EVENT" => RelayMessage::Event(RelayMessageEvent {
             subscription_id: value[1].clone().to_string(),
-            event: serde_json::from_value(value[2].clone())?
+            event: parse_event(value[2].clone())?
         }),
         "NOTICE" => RelayMessage::Notice(RelayMessageNotice {
             message: value[1].clone().to_string(),

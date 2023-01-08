@@ -1,11 +1,17 @@
-use eyre::Result;
+use eyre::{eyre, Result, Error};
 
+use secp256k1::{rand, SecretKey};
+// TODO: remove allows when introduced to main app
+#[allow(unused_imports)]
 use secp256k1::rand::rngs::OsRng;
+#[allow(unused_imports)]
 use secp256k1::hashes::sha256;
+#[allow(unused_imports)]
+use secp256k1::{Secp256k1, Message, XOnlyPublicKey, KeyPair};
+
 use secp256k1::schnorr::Signature;
-use secp256k1::{Secp256k1, Message, XOnlyPublicKey};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{json, Value};
 use sha2::{Sha256, Digest, digest::generic_array::GenericArray, digest::typenum::U32};
 use std::{fmt, num::ParseIntError};
 
@@ -71,10 +77,12 @@ pub fn derive_event_id(event: &Event) -> GenericArray<u8, U32> {
     hasher.finalize()
 }
 
+#[allow(dead_code)]
 fn hash_to_hex_string(bytes: &GenericArray<u8, U32>) -> String {
      format!("{:x}", &bytes)
 }
 
+#[allow(dead_code)]
 fn factory_build_event() -> Event {
     Event {
         id: String::from("da7d89bc06080d60ae537ff0285b51f7a5e15e63eb3c21a0c37c76edbbe24255"),
@@ -94,6 +102,7 @@ fn verify_event_id() {
     assert_eq!(hash_to_hex_string(&result), event.id);
 }
 
+#[allow(dead_code)]
 fn _decode_hex(s: &str) -> Result<Vec<u8>, ParseIntError> {
     (0..s.len())
         .step_by(2)
@@ -101,39 +110,77 @@ fn _decode_hex(s: &str) -> Result<Vec<u8>, ParseIntError> {
         .collect()
 }
 
-fn _sig_verify(event: &Event) -> Result<()> {
+pub fn sig_verify(event: &Event) -> Result<()> {
     let hash = derive_event_id(&event);
     let msg = Message::from_slice(&hash)?;
-    println!("pubkey: {:?}", &event.pubkey[..]);
+    // println!("pubkey: {:?}", &event.pubkey[..]);
     let pubkey_bytes = _decode_hex(&event.pubkey)?;
-    println!("pubkey_bytes: {:?}", pubkey_bytes);
+    // println!("pubkey_bytes: {:?}", pubkey_bytes);
     let pubkey = XOnlyPublicKey::from_slice(&pubkey_bytes)?;
-    println!("sig: {:?}", &event.sig);
+    // println!("sig: {:?}", &event.sig);
     let sig_bytes = _decode_hex(&event.sig)?;
-    println!("sig_bytes: {:?}", sig_bytes);
+    // println!("sig_bytes: {:?}", sig_bytes);
     let sig = Signature::from_slice(&sig_bytes)?;
     sig.verify(&msg, &pubkey)?;
     Ok(())
 }
 
+pub fn parse_event(raw: Value) -> Result<Event, Error> {
+    let parse_result = serde_json::from_value::<Event>(raw);
+    let event = match parse_result {
+        Ok(event) => Ok(event),
+        Err(e) => Err(eyre!("Could not parse event: {:?}", e))
+    }?;
+
+    let verification_result = sig_verify(&event);
+    match verification_result {
+        Ok(_) => Ok(()),
+        Err(e) => Err(eyre!("Signature invalid: {:?}", e))
+    }?;
+
+    Ok(event)
+}
+
 #[test]
-fn verify_event_sig() {
-    println!("verify_event_sig");
+fn test_parse_event() {
+    println!("test_parse_event");
     let event: Event = factory_build_event();
-    let result = _sig_verify(&event);
-    println!("sig result: {:?}", result);
+    let json_event = serde_json::to_value(event).expect("Evetn Serialization failed");
+    let result = parse_event(json_event);
     assert!(result.is_ok());
 }
 
 #[test]
-fn gen_keys() {
+fn test_sig_verify() {
+    println!("verify_event_sig");
+    let event: Event = factory_build_event();
+    let result = sig_verify(&event);
+    println!("sig result: {:?}", result);
+    assert!(result.is_ok());
+}
+
+pub fn gen_keypair() -> Result<(SecretKey, XOnlyPublicKey)> {
     let secp = Secp256k1::new();
-    let (secret_key, public_key) = secp.generate_keypair(&mut OsRng);
-    println!("secret_key: {:?}, pubkey: {:?}", secret_key, public_key);
+    let key_pair = KeyPair::new(&secp, &mut rand::thread_rng());
+    let public_key = XOnlyPublicKey::from_keypair(&key_pair);
+    let secret_key = key_pair.secret_key();
+    Ok((secret_key, public_key.0))
+}
+
+#[test]
+fn test_gen_keys() {
+    let (secret_key, public_key) = gen_keypair().expect("Failed to generate keypair");
+    println!("\nsecret_key: {}", secret_key.display_secret());
+    println!("public_key: {}", public_key);
+
     let message = Message::from_hashed_data::<sha256::Hash>("Hello World!".as_bytes());
 
-    let sig = secp.sign_ecdsa(&message, &secret_key);
-    assert!(secp.verify_ecdsa(&message, &sig, &public_key).is_ok());
+    let secp = Secp256k1::new();
+    let key_pair = KeyPair::new(&secp, &mut rand::thread_rng());
+    // let public_key = XOnlyPublicKey::from_keypair(&key_pair);
+    // let secret_key = key_pair.secret_key();
+    let sig = secp.sign_schnorr(&message, &key_pair);
+    println!("sig: {:?}", sig);
 
-    println!("sig: {}", &sig);
+    assert!(sig.verify(&message, &XOnlyPublicKey::from_keypair(&key_pair).0).is_ok());
 }
